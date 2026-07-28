@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCSO - Gestion des Agents SRU</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.85);
+        }
+        h1 {
+            color: #aa1d1dff;
+            text-align: center;
+            border-bottom: 2px solid #ffffffff;
+            padding-bottom: 10px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color:  var(--zz-bg);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #0000001a;
+        }
+        .button-bar {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .button-bar-bottom {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #1f752dff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #020202ff;
+        }
+        button.delete-button {
+            background-color: #e74c3c;
+        }
+        button.delete-button:hover {
+            background-color: #c0392b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #f2f2f2;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #1f752dff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #e3f2fd;
+        }
+        .role-sru {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+        }
+        .action-cell {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BCSO - Gestion des Agents SRU</h1>
+        
+        <div class="button-bar">
+            <button onclick="openModal('add-agent')">Ajouter un nouvel agent</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Grade</th>
+                    <th>Rôle dans la SRU</th>
+                    <th>Certifications</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="agents-table">
+                <tr>
+                    <td>John Doe</td>
+                    <td>Sergent</td>
+                    <td class="role-sru">Tireur d'élite</td>
+                    <td>ASU, SRU, Interception</td>
+                    <td>Actif</td>
+                    <td class="action-cell">
+                        <button class="delete-button" onclick="deleteAgent(this)">Supprimer</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Jane Smith</td>
+                    <td>Officier</td>
+                    <td class="role-sru">Négociateur</td>
+                    <td>CNU, SRU</td>
+                    <td>Actif</td>
+                    <td class="action-cell">
+                        <button class="delete-button" onclick="deleteAgent(this)">Supprimer</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="button-bar-bottom">
+            <button onclick="openModal('roles-sru')">Paramétrer les rôles SRU</button>
+            <button onclick="openModal('certifications')">Paramétrer les certifications</button>
+            <button onclick="openModal('statuts')">Lister les statuts possibles</button>
+        </div>
+    </div>
+
+    <!-- Modal pour ajouter un agent -->
+    <div id="add-agent" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('add-agent')">&times;</span>
+            <h2>Ajouter un nouvel agent</h2>
+            <form id="add-agent-form">
+                <div class="form-group">
+                    <label for="nom">Nom :</label>
+                    <input type="text" id="nom" required>
+                </div>
+                <div class="form-group">
+                    <label for="grade">Grade :</label>
+                    <input type="text" id="grade" required>
+                </div>
+                <div class="form-group">
+                    <label for="role-sru">Rôle dans la SRU :</label>
+                    <select id="role-sru" required>
+                        <option value="">-- Sélectionnez un rôle --</option>
+                        <option value="Tireur d'élite">Tireur d'élite</option>
+                        <option value="Négociateur">Négociateur</option>
+                        <option value="Pilote">Pilote</option>
+                        <option value="Médic">Médic</option>
+                        <option value="Chef d'équipe">Chef d'équipe</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Certifications :</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="certification" value="ASU"> ASU</label>
+                        <label><input type="checkbox" name="certification" value="SRU"> SRU</label>
+                        <label><input type="checkbox" name="certification" value="CNU"> CNU</label>
+                        <label><input type="checkbox" name="certification" value="Interception"> Interception</label>
+                        <label><input type="checkbox" name="certification" value="Hélitreuillage"> Hélitreuillage</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="statut">Statut :</label>
+                    <select id="statut" required>
+                        <option value="">-- Sélectionnez un statut --</option>
+                        <option value="Actif">Actif</option>
+                        <option value="En formation">En formation</option>
+                        <option value="Inactif">Inactif</option>
+                    </select>
+                </div>
+                <button type="button" onclick="addAgent()">Ajouter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal pour paramétrer les rôles SRU -->
+    <div id="roles-sru" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('roles-sru')">&times;</span>
+            <h2>Paramétrer les rôles SRU</h2>
+            <p>Liste des rôles disponibles dans la SRU.</p>
+            <div class="form-group">
+                <label for="new-role">Ajouter un rôle :</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-role" placeholder="Ex: Tireur d'élite">
+                    <button onclick="addRole()">Ajouter</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Rôles existants :</label>
+                <ul id="roles-list">
+                    <li>Tireur d'élite <button onclick="removeRole(this)">Supprimer</button></li>
+                    <li>Négociateur <button onclick="removeRole(this)">Supprimer</button></li>
+                    <li>Pilote <button onclick="removeRole(this)">Supprimer</button></li>
+                    <li>Médic <button onclick="removeRole(this)">Supprimer</button></li>
+                    <li>Chef d'équipe <button onclick="removeRole(this)">Supprimer</button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour paramétrer les certifications -->
+    <div id="certifications" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('certifications')">&times;</span>
+            <h2>Paramétrer les certifications</h2>
+            <p>Liste des certifications disponibles.</p>
+            <div class="form-group">
+                <label for="new-certification">Ajouter une certification :</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-certification" placeholder="Ex: ASU">
+                    <button onclick="addCertification()">Ajouter</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Certifications existantes :</label>
+                <ul id="certifications-list">
+                    <li>ASU <button onclick="removeCertification(this)">Supprimer</button></li>
+                    <li>SRU <button onclick="removeCertification(this)">Supprimer</button></li>
+                    <li>CNU <button onclick="removeCertification(this)">Supprimer</button></li>
+                    <li>Interception <button onclick="removeCertification(this)">Supprimer</button></li>
+                    <li>Hélitreuillage <button onclick="removeCertification(this)">Supprimer</button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour lister les statuts -->
+    <div id="statuts" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('statuts')">&times;</span>
+            <h2>Statuts possibles</h2>
+            <p>Liste des statuts disponibles pour les agents.</p>
+            <div class="form-group">
+                <label for="new-statut">Ajouter un statut :</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-statut" placeholder="Ex: Actif">
+                    <button onclick="addStatut()">Ajouter</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Statuts existants :</label>
+                <ul id="statuts-list">
+                    <li>Actif <button onclick="removeStatut(this)">Supprimer</button></li>
+                    <li>En formation <button onclick="removeStatut(this)">Supprimer</button></li>
+                    <li>Inactif <button onclick="removeStatut(this)">Supprimer</button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour ouvrir un modal
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = "block";
+        }
+
+        // Fonction pour fermer un modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+
+        // Fermer les modals si on clique en dehors
+        window.onclick = function(event) {
+            const modals = document.getElementsByClassName("modal");
+            for (let modal of modals) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            }
+        }
+
+        // Ajouter un agent
+        function addAgent() {
+            const nom = document.getElementById("nom").value;
+            const grade = document.getElementById("grade").value;
+            const role = document.getElementById("role-sru").value;
+            const statut = document.getElementById("statut").value;
+            
+            // Récupérer les certifications cochées
+            const certifications = [];
+            const checkboxes = document.querySelectorAll('input[name="certification"]:checked');
+            checkboxes.forEach(checkbox => {
+                certifications.push(checkbox.value);
+            });
+
+            if (nom && grade && role && statut) {
+                const table = document.getElementById("agents-table");
+                const newRow = table.insertRow();
+                newRow.innerHTML = `
+                    <td>${nom}</td>
+                    <td>${grade}</td>
+                    <td class="role-sru">${role}</td>
+                    <td>${certifications.join(", ")}</td>
+                    <td>${statut}</td>
+                    <td class="action-cell">
+                        <button class="delete-button" onclick="deleteAgent(this)">Supprimer</button>
+                    </td>
+                `;
+                
+                // Réinitialiser le formulaire
+                document.getElementById("add-agent-form").reset();
+                closeModal("add-agent");
+            } else {
+                alert("Veuillez remplir tous les champs obligatoires.");
+            }
+        }
+
+        // Supprimer un agent
+        function deleteAgent(button) {
+            const row = button.parentElement.parentElement;
+            row.remove();
+        }
+
+        // Ajouter un rôle SRU
+        function addRole() {
+            const newRole = document.getElementById("new-role").value;
+            if (newRole) {
+                const rolesList = document.getElementById("roles-list");
+                const newLi = document.createElement("li");
+                newLi.innerHTML = `${newRole} <button onclick="removeRole(this)">Supprimer</button>`;
+                rolesList.appendChild(newLi);
+                document.getElementById("new-role").value = "";
+                
+                // Ajouter le rôle au select du formulaire
+                const select = document.getElementById("role-sru");
+                const newOption = document.createElement("option");
+                newOption.value = newRole;
+                newOption.textContent = newRole;
+                select.appendChild(newOption);
+            }
+        }
+
+        // Supprimer un rôle SRU
+        function removeRole(button) {
+            const li = button.parentElement;
+            const role = li.textContent.replace(" Supprimer", "").trim();
+            li.remove();
+            
+            // Supprimer le rôle du select du formulaire
+            const select = document.getElementById("role-sru");
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === role) {
+                    select.remove(i);
+                    break;
+                }
+            }
+        }
+
+        // Ajouter une certification
+        function addCertification() {
+            const newCertification = document.getElementById("new-certification").value;
+            if (newCertification) {
+                const certificationsList = document.getElementById("certifications-list");
+                const newLi = document.createElement("li");
+                newLi.innerHTML = `${newCertification} <button onclick="removeCertification(this)">Supprimer</button>`;
+                certificationsList.appendChild(newLi);
+                document.getElementById("new-certification").value = "";
+                
+                // Ajouter la certification aux checkboxes du formulaire
+                const checkboxGroup = document.querySelector('.checkbox-group');
+                const newLabel = document.createElement("label");
+                newLabel.innerHTML = `<input type="checkbox" name="certification" value="${newCertification}"> ${newCertification}`;
+                checkboxGroup.appendChild(newLabel);
+            }
+        }
+
+        // Supprimer une certification
+        function removeCertification(button) {
+            const li = button.parentElement;
+            const certification = li.textContent.replace(" Supprimer", "").trim();
+            li.remove();
+            
+            // Supprimer la certification des checkboxes du formulaire
+            const checkboxes = document.querySelectorAll('input[name="certification"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.value === certification) {
+                    checkbox.parentElement.remove();
+                }
+            });
+        }
+
+        // Ajouter un statut
+        function addStatut() {
+            const newStatut = document.getElementById("new-statut").value;
+            if (newStatut) {
+                const statutsList = document.getElementById("statuts-list");
+                const newLi = document.createElement("li");
+                newLi.innerHTML = `${newStatut} <button onclick="removeStatut(this)">Supprimer</button>`;
+                statutsList.appendChild(newLi);
+                document.getElementById("new-statut").value = "";
+                
+                // Ajouter le statut au select du formulaire
+                const select = document.getElementById("statut");
+                const newOption = document.createElement("option");
+                newOption.value = newStatut;
+                newOption.textContent = newStatut;
+                select.appendChild(newOption);
+            }
+        }
+
+        // Supprimer un statut
+        function removeStatut(button) {
+            const li = button.parentElement;
+            const statut = li.textContent.replace(" Supprimer", "").trim();
+            li.remove();
+            
+            // Supprimer le statut du select du formulaire
+            const select = document.getElementById("statut");
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === statut) {
+                    select.remove(i);
+                    break;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
